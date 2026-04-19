@@ -91,6 +91,18 @@ Preferred structure:
 - data/words.ts
 - types/index.ts (optional)
 
+## State and session nuances
+- Be careful with study-session state that lives on the screen itself
+- Do not rebuild or replace the current study deck on every context/storage update during an active session
+- If a screen tracks local progress like current index, known/unknown answers, or studied count, keep that session data stable until the session ends or the mode explicitly changes
+- Avoid deriving live session counters only from data sources that can refresh asynchronously and reset UI state unexpectedly
+- If context data is used to build a deck, prefer creating the deck once for the current session and resetting it only when intentionally starting a new session
+- When fixing bugs around progress, finish actions, or results navigation, always check whether a re-render or context change is accidentally resetting local session state
+- For study flow changes, verify these cases explicitly:
+  - studied counter updates after each swipe
+  - finish button opens results with current session values
+  - local flip/swipe/progress state does not reset unexpectedly mid-session
+
 ## Interaction rules
 - Swipe should feel light, responsive, and natural on iPhone
 - Avoid stiff or heavy gestures

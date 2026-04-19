@@ -38,14 +38,7 @@ export default function ResultScreen() {
     if (unknownIds.length === 0) {
       return;
     }
-
-    router.replace({
-      pathname: '/study',
-      params: {
-        ids: unknownIds.join(','),
-        reset: String(Date.now()),
-      },
-    });
+    router.replace({ pathname: '/study', params: { mode: 'unknown' } });
   };
 
   const handleClose = () => {
@@ -71,49 +64,44 @@ export default function ResultScreen() {
           <View style={styles.centerWrap}>
             <BlurView intensity={38} tint={theme.blurTint} style={styles.panel}>
               <View style={styles.totalBlock}>
-                <Text style={styles.totalLabel}>Всего слов</Text>
+                <Text style={styles.totalLabel}>Изучено в сессии</Text>
                 <Text style={styles.totalValue}>{total}</Text>
               </View>
 
               <View style={styles.statsRow}>
                 <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>Не знаешь</Text>
+                  <Text style={styles.statLabel}>Не знаю</Text>
                   <Text style={[styles.statValue, styles.statValueNegative]}>{unknownCount}</Text>
                 </View>
 
                 <View style={styles.statDivider} />
 
                 <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>Знаешь</Text>
+                  <Text style={styles.statLabel}>Знаю</Text>
                   <Text style={[styles.statValue, styles.statValuePositive]}>{knownCount}</Text>
                 </View>
               </View>
 
               <Text style={styles.note}>
                 {unknownCount === 0
-                  ? 'Все слова пройдены. Повтор пока не нужен.'
-                  : 'Повтори незнакомые слова, чтобы закрепить результат.'}
+                  ? 'Отлично! Все слова из сессии знакомы.'
+                  : 'Продолжай изучать незнакомые слова.'}
               </Text>
             </BlurView>
           </View>
 
           <View style={styles.actionsRow}>
             <Pressable onPress={handleClose} style={styles.secondaryButton}>
-              <Text style={styles.secondaryButtonText}>Закрыть</Text>
+              <BlurView intensity={24} tint={theme.blurTint} style={styles.secondaryButtonGlass}>
+                <Text style={styles.secondaryButtonText}>Закрыть</Text>
+              </BlurView>
             </Pressable>
 
-            <Pressable
-              disabled={unknownIds.length === 0}
-              onPress={handleRepeatUnknown}
-              style={[styles.primaryButton, unknownIds.length === 0 && styles.primaryButtonDisabled]}>
-              <Text
-                style={[
-                  styles.primaryButtonText,
-                  unknownIds.length === 0 && styles.primaryButtonTextDisabled,
-                ]}>
-                Повторить
-              </Text>
-            </Pressable>
+            {unknownCount > 0 && (
+              <Pressable onPress={handleRepeatUnknown} style={styles.primaryButton}>
+                <Text style={styles.primaryButtonText}>Повторить ({unknownCount})</Text>
+              </Pressable>
+            )}
           </View>
         </View>
       </SafeAreaView>
@@ -234,12 +222,17 @@ const createStyles = (theme: AppTheme) =>
       gap: 12,
     },
     secondaryButton: {
+      borderRadius: 8,
+      flex: 1,
+      minHeight: 54,
+      overflow: 'hidden',
+    },
+    secondaryButtonGlass: {
       alignItems: 'center',
       backgroundColor: theme.button.secondary,
       borderRadius: 8,
       borderWidth: 1,
       borderColor: theme.button.secondaryBorder,
-      flex: 1,
       justifyContent: 'center',
       minHeight: 54,
       paddingHorizontal: 18,
@@ -267,14 +260,12 @@ const createStyles = (theme: AppTheme) =>
     },
     primaryButtonDisabled: {
       backgroundColor: theme.button.disabled,
+      opacity: 0.5,
     },
     primaryButtonText: {
       color: theme.text.onPrimary,
       fontSize: 16,
       fontWeight: '700',
       letterSpacing: 0,
-    },
-    primaryButtonTextDisabled: {
-      color: theme.text.onPrimary,
     },
   });

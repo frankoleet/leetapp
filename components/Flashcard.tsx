@@ -230,7 +230,14 @@ export const Flashcard = forwardRef<FlashcardHandle, FlashcardProps>(function Fl
               </View>
 
               <View style={styles.content}>
-                <Text style={styles.wordText}>{word.english}</Text>
+                <Text style={styles.wordText} numberOfLines={1} adjustsFontSizeToFit>
+                  {word.english}
+                </Text>
+                {word.transcription && (
+                  <Text style={styles.transcription} numberOfLines={1}>
+                    {word.transcription}
+                  </Text>
+                )}
               </View>
             </LinearGradient>
           </Animated.View>
@@ -247,7 +254,14 @@ export const Flashcard = forwardRef<FlashcardHandle, FlashcardProps>(function Fl
               </View>
 
               <View style={styles.content}>
-                <Text style={styles.translationText}>{word.russian}</Text>
+                <Text style={styles.translationText} numberOfLines={1} adjustsFontSizeToFit>
+                  {word.russian}
+                </Text>
+                {word.mnemonic && (
+                  <Text style={styles.mnemonic} numberOfLines={2}>
+                    {word.mnemonic}
+                  </Text>
+                )}
               </View>
             </LinearGradient>
           </Animated.View>
@@ -342,19 +356,41 @@ const createStyles = (theme: AppTheme) =>
       flex: 1,
       justifyContent: 'center',
       paddingHorizontal: 16,
+      paddingTop: 12,
     },
     wordText: {
       color: theme.text.primary,
       fontSize: 38,
       fontWeight: '800',
       letterSpacing: 0,
+      lineHeight: 44,
+      textAlign: 'center',
+    },
+    transcription: {
+      color: theme.text.secondary,
+      fontSize: 16,
+      fontWeight: '500',
+      letterSpacing: 0,
+      lineHeight: 20,
+      marginTop: 8,
       textAlign: 'center',
     },
     translationText: {
       color: theme.text.strong,
-      fontSize: 32,
+      fontSize: 30,
       fontWeight: '700',
       letterSpacing: 0,
+      lineHeight: 36,
+      textAlign: 'center',
+    },
+    mnemonic: {
+      color: theme.text.muted,
+      fontSize: 14,
+      fontWeight: '500',
+      letterSpacing: 0,
+      lineHeight: 20,
+      marginTop: 12,
+      paddingHorizontal: 8,
       textAlign: 'center',
     },
   });

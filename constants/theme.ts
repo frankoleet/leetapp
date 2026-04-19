@@ -193,7 +193,7 @@ export const darkTheme: AppTheme = {
     purple: '#7C5CFF',
   },
   effects: {
-    titleGlow: 'rgba(155, 132, 255, 0.34)',
+    titleGlow: 'rgba(255, 179, 107, 0.6)',
   },
 };
 

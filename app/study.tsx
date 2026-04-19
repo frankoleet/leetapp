@@ -9,100 +9,145 @@ import { router, useLocalSearchParams } from 'expo-router';
 import type { AppTheme } from '@/constants/theme';
 import { Flashcard, type FlashcardHandle } from '@/components/Flashcard';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { useWords } from '@/contexts/WordsContext';
 import { WORDS } from '@/data/words';
+import { shuffleArray } from '@/utils/shuffle';
 import { SwipeDirection, WordPair } from '@/types';
 
 const readParam = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] : value;
 
-const buildDeck = (idsParam: string | undefined): WordPair[] => {
-  if (!idsParam) {
-    return WORDS;
-  }
-
-  const ids = idsParam
-    .split(',')
-    .map((id) => id.trim())
-    .filter(Boolean);
-
-  if (ids.length === 0) {
-    return [];
-  }
-
-  return ids
-    .map((id) => WORDS.find((word) => word.id === id))
-    .filter((word): word is WordPair => Boolean(word));
-};
-
 export default function StudyScreen() {
   const { width, height } = useWindowDimensions();
   const { theme } = useAppTheme();
+  const {
+    knownWords,
+    unknownWords,
+    addKnownWord,
+    addUnknownWord,
+  } = useWords();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const params = useLocalSearchParams<{ ids?: string | string[]; reset?: string | string[] }>();
-  const idsParam = readParam(params.ids);
-  const resetParam = readParam(params.reset);
-  const deck = useMemo(() => buildDeck(idsParam), [idsParam]);
-  const flashcardRef = useRef<FlashcardHandle>(null);
+  const params = useLocalSearchParams<{ mode?: string | string[] }>();
+  const mode = readParam(params.mode) || 'unstudied';
 
+  const buildDeck = useCallback(() => {
+    if (mode === 'known') {
+      return WORDS.filter((word) => knownWords.includes(word.id));
+    }
+    if (mode === 'unknown') {
+      return WORDS.filter((word) => unknownWords.includes(word.id));
+    }
+    const studiedIds = new Set([...knownWords, ...unknownWords]);
+    return shuffleArray(WORDS.filter((word) => !studiedIds.has(word.id)));
+  }, [knownWords, mode, unknownWords]);
+
+  const flashcardRef = useRef<FlashcardHandle>(null);
+  const previousModeRef = useRef(mode);
+
+  const [deck, setDeck] = useState<WordPair[]>(() => buildDeck());
+  const [initialDeckSize, setInitialDeckSize] = useState(() => buildDeck().length);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
-  const [knownIds, setKnownIds] = useState<string[]>([]);
-  const [unknownIds, setUnknownIds] = useState<string[]>([]);
+  const [sessionKnown, setSessionKnown] = useState<string[]>([]);
+  const [sessionUnknown, setSessionUnknown] = useState<string[]>([]);
 
   useEffect(() => {
+    if (previousModeRef.current === mode) {
+      return;
+    }
+
+    previousModeRef.current = mode;
+    const newDeck = buildDeck();
+    setDeck(newDeck);
+    setInitialDeckSize(newDeck.length);
     setCurrentIndex(0);
     setIsFlipped(false);
-    setKnownIds([]);
-    setUnknownIds([]);
-  }, [deck, resetParam]);
+    setSessionKnown([]);
+    setSessionUnknown([]);
+  }, [buildDeck, mode]);
 
   const currentWord = deck[currentIndex];
-  const completed = knownIds.length + unknownIds.length;
-  const progress = deck.length === 0 ? 0 : completed / deck.length;
+  const studiedCount = sessionKnown.length + sessionUnknown.length;
+  const progress = initialDeckSize === 0 ? 0 : studiedCount / initialDeckSize;
   const cardSize = Math.max(240, Math.min(width - 48, height * 0.42, 390));
 
   const handleBack = () => {
     router.replace('/');
   };
 
+  const handleFinish = () => {
+    const totalStudied = sessionKnown.length + sessionUnknown.length;
+    
+    if (totalStudied === 0) {
+      router.replace('/');
+      return;
+    }
+
+    router.replace({
+      pathname: '/result',
+      params: {
+        total: String(totalStudied),
+        knownCount: String(sessionKnown.length),
+        unknownCount: String(sessionUnknown.length),
+        unknownIds: sessionUnknown.join(','),
+      },
+    });
+  };
+
   const handleSwipe = useCallback(
     (direction: SwipeDirection) => {
-      if (!currentWord) {
+      const word = deck[currentIndex];
+      
+      if (!word) {
+        console.warn('No word at index:', currentIndex);
         return;
       }
 
-      const nextKnownIds = direction === 'known' ? [...knownIds, currentWord.id] : knownIds;
-      const nextUnknownIds =
-        direction === 'unknown' ? [...unknownIds, currentWord.id] : unknownIds;
+      const wordId = word.id;
 
-      if (currentIndex === deck.length - 1) {
+      if (direction === 'known') {
+        void addKnownWord(wordId);
+        setSessionKnown((prev) => [...prev, wordId]);
+      } else {
+        void addUnknownWord(wordId);
+        setSessionUnknown((prev) => [...prev, wordId]);
+      }
+
+      // Удаляем текущее слово из deck
+      const newDeck = deck.filter((_, index) => index !== currentIndex);
+      setDeck(newDeck);
+
+      // Если deck пустой, показываем результаты
+      if (newDeck.length === 0) {
+        const totalStudied = (direction === 'known' ? sessionKnown.length + 1 : sessionKnown.length) +
+                            (direction === 'unknown' ? sessionUnknown.length + 1 : sessionUnknown.length);
+        
         router.replace({
           pathname: '/result',
           params: {
-            total: String(deck.length),
-            knownCount: String(nextKnownIds.length),
-            unknownCount: String(nextUnknownIds.length),
-            unknownIds: nextUnknownIds.join(','),
+            total: String(totalStudied),
+            knownCount: String(direction === 'known' ? sessionKnown.length + 1 : sessionKnown.length),
+            unknownCount: String(direction === 'unknown' ? sessionUnknown.length + 1 : sessionUnknown.length),
+            unknownIds: direction === 'unknown' 
+              ? [...sessionUnknown, wordId].join(',')
+              : sessionUnknown.join(','),
           },
         });
         return;
       }
 
-      setKnownIds(nextKnownIds);
-      setUnknownIds(nextUnknownIds);
-      setCurrentIndex((index) => index + 1);
+      // Если currentIndex вышел за пределы, возвращаем на последний элемент
+      if (currentIndex >= newDeck.length) {
+        setCurrentIndex(newDeck.length - 1);
+      }
+
       setIsFlipped(false);
     },
-    [currentIndex, currentWord, deck.length, knownIds, unknownIds]
+    [currentIndex, deck, addKnownWord, addUnknownWord, sessionKnown, sessionUnknown]
   );
 
   const handleStartOver = () => {
-    router.replace({
-      pathname: '/study',
-      params: {
-        reset: String(Date.now()),
-      },
-    });
+    router.replace('/');
   };
 
   if (deck.length === 0) {
@@ -118,13 +163,13 @@ export default function StudyScreen() {
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.emptyWrap}>
             <BlurView intensity={40} tint={theme.blurTint} style={styles.emptyPanel}>
-              <Text style={styles.emptyTitle}>Nothing to repeat</Text>
+              <Text style={styles.emptyTitle}>Нет слов</Text>
               <Text style={styles.emptyText}>
-                В прошлой сессии не осталось незнакомых слов. Начните полную колоду заново.
+                В этой категории пока нет слов. Вернитесь на главный экран и начните изучение.
               </Text>
 
               <Pressable onPress={handleStartOver} style={styles.primaryButton}>
-                <Text style={styles.primaryButtonText}>Start over</Text>
+                <Text style={styles.primaryButtonText}>На главную</Text>
               </Pressable>
             </BlurView>
           </View>
@@ -154,19 +199,19 @@ export default function StudyScreen() {
             <BlurView intensity={34} tint={theme.blurTint} style={styles.topBar}>
               <View style={styles.topBarRow}>
                 <View>
-                  <Text style={styles.eyebrow}>Session</Text>
-                  <Text style={styles.title}>Build vocabulary</Text>
+                  <Text style={styles.eyebrow}>Сессия</Text>
+                  <Text style={styles.title}>Изучено: {studiedCount}</Text>
                 </View>
 
-                <View style={styles.counterChip}>
-                  <Text style={styles.counterText}>
-                    {Math.min(currentIndex + 1, deck.length)} / {deck.length}
-                  </Text>
-                </View>
+                <Pressable onPress={handleFinish} style={styles.finishButton}>
+                  <Text style={styles.finishButtonText}>Закончить</Text>
+                </Pressable>
               </View>
 
               <View style={styles.progressTrack}>
-                <View style={[styles.progressFill, { width: `${Math.max(progress, 0.04) * 100}%` }]} />
+                <View
+                  style={[styles.progressFill, { width: `${Math.max(progress, 0.02) * 100}%` }]}
+                />
               </View>
             </BlurView>
           </View>
@@ -299,16 +344,14 @@ const createStyles = (theme: AppTheme) =>
       fontWeight: '800',
       letterSpacing: 0,
     },
-    counterChip: {
-      backgroundColor: theme.chip.bg,
+    finishButton: {
+      backgroundColor: theme.button.primary,
       borderRadius: 8,
-      borderWidth: 1,
-      borderColor: theme.chip.border,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
     },
-    counterText: {
-      color: theme.text.strong,
+    finishButtonText: {
+      color: theme.text.onPrimary,
       fontSize: 14,
       fontWeight: '700',
       letterSpacing: 0,
