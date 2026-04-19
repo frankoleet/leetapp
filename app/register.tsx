@@ -9,6 +9,7 @@ import MaskedView from '@react-native-masked-view/masked-view';
 import type { AppTheme } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useAuth } from '@/contexts/AuthContext';
+import { createShadow } from '@/utils/shadow';
 
 export default function RegisterScreen() {
   const { theme } = useAppTheme();
@@ -262,10 +263,12 @@ const createStyles = (theme: AppTheme) =>
       minHeight: 56,
       paddingHorizontal: 20,
       paddingVertical: 16,
-      shadowColor: theme.shadow.cool,
-      shadowOffset: { width: 0, height: 12 },
-      shadowOpacity: theme.mode === 'dark' ? 0.2 : 0.16,
-      shadowRadius: 20,
+      ...createShadow({
+        color: theme.shadow.cool,
+        offsetY: 12,
+        opacity: theme.mode === 'dark' ? 0.2 : 0.16,
+        radius: 20,
+      }),
     },
     primaryButtonPressed: {
       backgroundColor: theme.button.primaryPressed,

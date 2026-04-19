@@ -11,6 +11,7 @@ import { Flashcard, type FlashcardHandle } from '@/components/Flashcard';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { useWords } from '@/contexts/WordsContext';
 import { WORDS } from '@/data/words';
+import { createShadow } from '@/utils/shadow';
 import { shuffleArray } from '@/utils/shuffle';
 import { SwipeDirection, WordPair } from '@/types';
 
@@ -89,7 +90,6 @@ export default function StudyScreen() {
         total: String(totalStudied),
         knownCount: String(sessionKnown.length),
         unknownCount: String(sessionUnknown.length),
-        unknownIds: sessionUnknown.join(','),
       },
     });
   };
@@ -99,7 +99,6 @@ export default function StudyScreen() {
       const word = deck[currentIndex];
       
       if (!word) {
-        console.warn('No word at index:', currentIndex);
         return;
       }
 
@@ -128,9 +127,6 @@ export default function StudyScreen() {
             total: String(totalStudied),
             knownCount: String(direction === 'known' ? sessionKnown.length + 1 : sessionKnown.length),
             unknownCount: String(direction === 'unknown' ? sessionUnknown.length + 1 : sessionUnknown.length),
-            unknownIds: direction === 'unknown' 
-              ? [...sessionUnknown, wordId].join(',')
-              : sessionUnknown.join(','),
           },
         });
         return;
@@ -307,10 +303,12 @@ const createStyles = (theme: AppTheme) =>
       height: 36,
       justifyContent: 'center',
       overflow: 'hidden',
-      shadowColor: theme.shadow.purple,
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: theme.mode === 'dark' ? 0.18 : 0.1,
-      shadowRadius: 18,
+      ...createShadow({
+        color: theme.shadow.purple,
+        offsetY: 8,
+        opacity: theme.mode === 'dark' ? 0.18 : 0.1,
+        radius: 18,
+      }),
       width: 36,
     },
     topBar: {
@@ -320,10 +318,12 @@ const createStyles = (theme: AppTheme) =>
       borderColor: theme.border.subtle,
       overflow: 'hidden',
       padding: 18,
-      shadowColor: theme.shadow.cool,
-      shadowOffset: { width: 0, height: 16 },
-      shadowOpacity: theme.mode === 'dark' ? 0.18 : 0.12,
-      shadowRadius: 28,
+      ...createShadow({
+        color: theme.shadow.cool,
+        offsetY: 16,
+        opacity: theme.mode === 'dark' ? 0.18 : 0.12,
+        radius: 28,
+      }),
     },
     topBarRow: {
       alignItems: 'center',
@@ -429,10 +429,12 @@ const createStyles = (theme: AppTheme) =>
       borderColor: theme.border.subtle,
       overflow: 'hidden',
       padding: 24,
-      shadowColor: theme.shadow.cool,
-      shadowOffset: { width: 0, height: 18 },
-      shadowOpacity: theme.mode === 'dark' ? 0.18 : 0.12,
-      shadowRadius: 28,
+      ...createShadow({
+        color: theme.shadow.cool,
+        offsetY: 18,
+        opacity: theme.mode === 'dark' ? 0.18 : 0.12,
+        radius: 28,
+      }),
     },
     emptyTitle: {
       color: theme.text.primary,

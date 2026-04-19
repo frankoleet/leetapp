@@ -18,6 +18,7 @@ import Animated, {
 import type { AppTheme } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/use-app-theme';
 import { SwipeDirection, WordPair } from '@/types';
+import { createShadow } from '@/utils/shadow';
 
 export type FlashcardHandle = {
   triggerSwipe: (direction: SwipeDirection) => void;
@@ -322,10 +323,12 @@ const createStyles = (theme: AppTheme) =>
       overflow: 'hidden',
       position: 'absolute',
       right: 0,
-      shadowColor: theme.shadow.purple,
-      shadowOffset: { width: 0, height: 22 },
-      shadowOpacity: theme.mode === 'dark' ? 0.22 : 0.12,
-      shadowRadius: 30,
+      ...createShadow({
+        color: theme.shadow.purple,
+        offsetY: 22,
+        opacity: theme.mode === 'dark' ? 0.22 : 0.12,
+        radius: 30,
+      }),
       top: 0,
     },
     gradient: {

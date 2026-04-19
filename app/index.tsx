@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useThemeContext } from '@/contexts/ThemeContext';
 import { useWords } from '@/contexts/WordsContext';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { createShadow } from '@/utils/shadow';
 
 export default function StartScreen() {
   const { theme } = useAppTheme();
@@ -332,10 +333,12 @@ const createStyles = (theme: AppTheme) =>
       paddingHorizontal: 20,
       paddingTop: 18,
       paddingBottom: 18,
-      shadowColor: theme.shadow.purple,
-      shadowOffset: { width: 0, height: 16 },
-      shadowOpacity: theme.mode === 'dark' ? 0.18 : 0.1,
-      shadowRadius: 28,
+      ...createShadow({
+        color: theme.shadow.purple,
+        offsetY: 16,
+        opacity: theme.mode === 'dark' ? 0.18 : 0.1,
+        radius: 28,
+      }),
       width: '100%',
     },
     previewLabel: {
@@ -391,10 +394,12 @@ const createStyles = (theme: AppTheme) =>
       minHeight: 58,
       paddingHorizontal: 20,
       paddingVertical: 16,
-      shadowColor: theme.shadow.cool,
-      shadowOffset: { width: 0, height: 12 },
-      shadowOpacity: theme.mode === 'dark' ? 0.2 : 0.16,
-      shadowRadius: 20,
+      ...createShadow({
+        color: theme.shadow.cool,
+        offsetY: 12,
+        opacity: theme.mode === 'dark' ? 0.2 : 0.16,
+        radius: 20,
+      }),
     },
     primaryButtonPressed: {
       backgroundColor: theme.button.primaryPressed,

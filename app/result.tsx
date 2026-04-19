@@ -7,6 +7,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 
 import type { AppTheme } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { createShadow } from '@/utils/shadow';
 
 const readParam = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] : value;
@@ -23,19 +24,14 @@ export default function ResultScreen() {
     total?: string | string[];
     knownCount?: string | string[];
     unknownCount?: string | string[];
-    unknownIds?: string | string[];
   }>();
 
   const total = parseCount(readParam(params.total));
   const knownCount = parseCount(readParam(params.knownCount));
   const unknownCount = parseCount(readParam(params.unknownCount));
-  const unknownIds = (readParam(params.unknownIds) ?? '')
-    .split(',')
-    .map((id) => id.trim())
-    .filter(Boolean);
 
   const handleRepeatUnknown = () => {
-    if (unknownIds.length === 0) {
+    if (unknownCount === 0) {
       return;
     }
     router.replace({ pathname: '/study', params: { mode: 'unknown' } });
@@ -153,10 +149,12 @@ const createStyles = (theme: AppTheme) =>
       paddingHorizontal: 22,
       paddingTop: 28,
       paddingBottom: 24,
-      shadowColor: theme.shadow.cool,
-      shadowOffset: { width: 0, height: 18 },
-      shadowOpacity: theme.mode === 'dark' ? 0.18 : 0.12,
-      shadowRadius: 28,
+      ...createShadow({
+        color: theme.shadow.cool,
+        offsetY: 18,
+        opacity: theme.mode === 'dark' ? 0.18 : 0.12,
+        radius: 28,
+      }),
     },
     totalBlock: {
       alignItems: 'center',
@@ -253,10 +251,12 @@ const createStyles = (theme: AppTheme) =>
       minHeight: 54,
       paddingHorizontal: 18,
       paddingVertical: 14,
-      shadowColor: theme.shadow.purple,
-      shadowOffset: { width: 0, height: 10 },
-      shadowOpacity: theme.mode === 'dark' ? 0.2 : 0.12,
-      shadowRadius: 20,
+      ...createShadow({
+        color: theme.shadow.purple,
+        offsetY: 10,
+        opacity: theme.mode === 'dark' ? 0.2 : 0.12,
+        radius: 20,
+      }),
     },
     primaryButtonDisabled: {
       backgroundColor: theme.button.disabled,
