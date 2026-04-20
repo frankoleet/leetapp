@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Keyboard, Pressable, StyleSheet, Text, TextInput, TouchableWithoutFeedback, View } from 'react-native';
+import { Keyboard, Platform, Pressable, StyleSheet, Text, TextInput, TouchableWithoutFeedback, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -93,11 +93,12 @@ export default function RegisterScreen() {
         colors={[theme.background.start, theme.background.mid, theme.background.end]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
+        pointerEvents="none"
         style={StyleSheet.absoluteFill}
       />
 
       <SafeAreaView style={styles.safeArea}>
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <TouchableWithoutFeedback disabled={Platform.OS === 'web'} onPress={Keyboard.dismiss}>
           <View style={styles.content}>
           <View style={styles.upperBlock}>
             <View style={styles.titleBlock}>

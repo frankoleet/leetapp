@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
   Keyboard,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -100,11 +101,12 @@ export default function LoginScreen() {
         colors={[theme.background.start, theme.background.mid, theme.background.end]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
+        pointerEvents="none"
         style={StyleSheet.absoluteFill}
       />
 
       <SafeAreaView style={styles.safeArea}>
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <TouchableWithoutFeedback disabled={Platform.OS === 'web'} onPress={Keyboard.dismiss}>
           <View style={styles.content}>
             <View style={styles.headerRow}>
               <View style={styles.headerSpacer} />
