@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import MaskedView from '@react-native-masked-view/masked-view';
 
 import type { AppTheme } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,37 +17,62 @@ import { createShadow } from '@/utils/shadow';
 export default function StartScreen() {
   const { theme } = useAppTheme();
   const { themeMode, setThemeMode } = useThemeContext();
-  const { knownWords, unknownWords } = useWords();
   const { logout } = useAuth();
+  const { customWordsLoading, statsBySource } = useWords();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
-  const knownCount = knownWords.length;
-  const unknownCount = unknownWords.length;
+  const systemStats = statsBySource.system;
+  const customStats = statsBySource.custom;
+  const isWeb = Platform.OS === 'web';
+  const themeGlyph = themeMode === 'dark' ? '☾' : '☀';
 
   const fireButtonHaptic = () => {
     void Haptics.selectionAsync();
   };
 
-  const handleStart = () => {
+  const handleSystemStart = () => {
     fireButtonHaptic();
-    router.push({ pathname: '/study', params: { mode: 'unstudied' } });
+    router.push({ pathname: '/study', params: { mode: 'system:start' } });
   };
 
-  const handleKnown = () => {
-    if (knownCount === 0) return;
+  const handleSystemUnknown = () => {
+    if (systemStats.unknown === 0) return;
     fireButtonHaptic();
-    router.push({ pathname: '/study', params: { mode: 'known' } });
+    router.push({ pathname: '/study', params: { mode: 'system:review', bucket: 'unknown' } });
   };
 
-  const handleUnknown = () => {
-    if (unknownCount === 0) return;
+  const handleSystemKnown = () => {
+    if (systemStats.known === 0) return;
     fireButtonHaptic();
-    router.push({ pathname: '/study', params: { mode: 'unknown' } });
+    router.push({ pathname: '/study', params: { mode: 'system:review', bucket: 'known' } });
   };
 
-  const handleThemeSwitch = (mode: 'light' | 'dark') => {
+  const handleCustomStart = () => {
+    if (customWordsLoading || customStats.total === 0) return;
     fireButtonHaptic();
-    void setThemeMode(mode);
+    router.push({ pathname: '/study', params: { mode: 'custom:start' } });
+  };
+
+  const handleCustomUnknown = () => {
+    if (customWordsLoading || customStats.unknown === 0) return;
+    fireButtonHaptic();
+    router.push({ pathname: '/study', params: { mode: 'custom:review', bucket: 'unknown' } });
+  };
+
+  const handleCustomKnown = () => {
+    if (customWordsLoading || customStats.known === 0) return;
+    fireButtonHaptic();
+    router.push({ pathname: '/study', params: { mode: 'custom:review', bucket: 'known' } });
+  };
+
+  const handleAddWord = () => {
+    fireButtonHaptic();
+    router.push('/add-word');
+  };
+
+  const handleThemeToggle = () => {
+    fireButtonHaptic();
+    void setThemeMode(themeMode === 'dark' ? 'light' : 'dark');
   };
 
   const handleLogout = () => {
@@ -65,133 +90,200 @@ export default function StartScreen() {
       />
 
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.content}>
-          <View style={styles.headerRow}>
-            <View style={styles.headerSpacer} />
-
-            <Pressable onPress={handleLogout} style={styles.logoutButton}>
-              <Text style={styles.logoutText}>Выйти</Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.upperBlock}>
-            <View style={styles.topArea}>
-              <View style={styles.topRow}>
-                <BlurView intensity={34} tint={theme.blurTint} style={styles.badge}>
-                  <Text style={styles.badgeText}>Daily vocabulary</Text>
-                </BlurView>
-
-                <View style={styles.themeSwitch}>
-                  <Pressable
-                    onPress={() => handleThemeSwitch('light')}
-                    style={[
-                      styles.themeSwitchButton,
-                      themeMode === 'light' && styles.themeSwitchButtonActive,
-                    ]}>
-                    <Text
-                      style={[
-                        styles.themeSwitchText,
-                        themeMode === 'light' && styles.themeSwitchTextActive,
-                      ]}>
-                      Light
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => handleThemeSwitch('dark')}
-                    style={[
-                      styles.themeSwitchButton,
-                      themeMode === 'dark' && styles.themeSwitchButtonActive,
-                    ]}>
-                    <Text
-                      style={[
-                        styles.themeSwitchText,
-                        themeMode === 'dark' && styles.themeSwitchTextActive,
-                      ]}>
-                      Dark
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
-
-              <View style={styles.titleBlock}>
-                {theme.mode === 'dark' ? (
-                  <MaskedView
-                    maskElement={<Text style={[styles.title, styles.titleMask]}>Leet App</Text>}>
-                    <LinearGradient
-                      colors={['#FF6EC7', '#9B84FF', '#FFB36B', '#FFD84D']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}>
-                      <Text style={[styles.title, styles.titleTransparent]}>Leet App</Text>
-                    </LinearGradient>
-                  </MaskedView>
-                ) : (
-                  <Text style={styles.title}>Leet App</Text>
-                )}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}>
+          <View style={styles.headerBlock}>
+            <View style={styles.headerTopRow}>
+              <View style={styles.titleWrap}>
+                <Text style={styles.title}>Leet App</Text>
                 <Text style={styles.subtitle}>Учи английские слова каждый день</Text>
               </View>
-            </View>
 
-            <View style={styles.middleArea}>
-              <BlurView intensity={28} tint={theme.blurTint} style={styles.previewCard}>
-                <Text style={styles.previewLabel}>Статистика</Text>
-                <View style={styles.statsRow}>
-                  <View style={styles.statItem}>
-                    <Text style={[styles.statValue, styles.statValueSuccess]}>{knownCount}</Text>
-                    <Text style={styles.statLabel}>Знаю</Text>
-                  </View>
-                  <View style={styles.statDivider} />
-                  <View style={styles.statItem}>
-                    <Text style={[styles.statValue, styles.statValueDanger]}>{unknownCount}</Text>
-                    <Text style={styles.statLabel}>Не знаю</Text>
-                  </View>
+              <View style={styles.headerActions}>
+                <Pressable onPress={handleThemeToggle} style={styles.iconButton}>
+                  {isWeb ? (
+                    <Text style={styles.iconGlyph}>{themeGlyph}</Text>
+                  ) : (
+                    <Ionicons
+                      name={themeMode === 'dark' ? 'moon' : 'sunny'}
+                      size={16}
+                      color={theme.text.secondary}
+                    />
+                  )}
+                  <Text style={styles.iconButtonText}>
+                    {themeMode === 'dark' ? 'Dark' : 'Light'}
+                  </Text>
+                </Pressable>
+
+                <Pressable onPress={handleLogout} style={styles.logoutButton}>
+                  <Text style={styles.logoutText}>Выйти</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.cardsColumn}>
+            <BlurView intensity={28} tint={theme.blurTint} style={styles.previewCard}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.previewLabel}>Базовый словарь</Text>
+                <Text style={styles.cardDescription}>Случайные слова</Text>
+              </View>
+
+              <View style={styles.statsRow}>
+                <View style={styles.statItem}>
+                  <Text style={[styles.statValue, styles.statValueSuccess]}>{systemStats.known}</Text>
+                  <Text style={styles.statLabel}>Знаю</Text>
                 </View>
-              </BlurView>
-            </View>
-          </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={[styles.statValue, styles.statValueDanger]}>{systemStats.unknown}</Text>
+                  <Text style={styles.statLabel}>Не знаю</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>∞</Text>
+                  <Text style={styles.statLabel}>Новые</Text>
+                </View>
+              </View>
 
-          <View style={styles.bottomArea}>
-            <Pressable
-              onPress={handleStart}
-              style={({ pressed }) => [styles.primaryButton, pressed && styles.primaryButtonPressed]}>
-              <Text style={styles.primaryButtonText}>Начать</Text>
-            </Pressable>
+              <View style={styles.cardActions}>
+                <Pressable
+                  onPress={handleSystemStart}
+                  style={({ pressed }) => [
+                    styles.primaryButton,
+                    styles.cardPrimaryButton,
+                    pressed && styles.primaryButtonPressed,
+                  ]}>
+                  <Text style={styles.primaryButtonText}>Начать</Text>
+                </Pressable>
 
-            <View style={styles.secondaryRow}>
-              <Pressable
-                onPress={handleKnown}
-                disabled={knownCount === 0}
-                style={[styles.secondaryButton, knownCount === 0 && styles.secondaryButtonDisabled]}>
-                <BlurView intensity={24} tint={theme.blurTint} style={styles.secondaryButtonGlass}>
-                  <Text
+                <View style={styles.secondaryRow}>
+                  <Pressable
+                    onPress={handleSystemUnknown}
+                    disabled={systemStats.unknown === 0}
                     style={[
-                      styles.secondaryButtonText,
-                      knownCount === 0 && styles.secondaryButtonTextDisabled,
+                      styles.secondaryButton,
+                      systemStats.unknown === 0 && styles.secondaryButtonDisabled,
                     ]}>
-                    Знаю ({knownCount})
-                  </Text>
-                </BlurView>
-              </Pressable>
+                    <BlurView intensity={24} tint={theme.blurTint} style={styles.secondaryButtonGlass}>
+                      <Text
+                        style={[
+                          styles.secondaryButtonText,
+                          systemStats.unknown === 0 && styles.secondaryButtonTextDisabled,
+                        ]}>
+                        Не знаю
+                      </Text>
+                    </BlurView>
+                  </Pressable>
 
-              <Pressable
-                onPress={handleUnknown}
-                disabled={unknownCount === 0}
-                style={[
-                  styles.secondaryButton,
-                  unknownCount === 0 && styles.secondaryButtonDisabled,
-                ]}>
-                <BlurView intensity={24} tint={theme.blurTint} style={styles.secondaryButtonGlass}>
-                  <Text
+                  <Pressable
+                    onPress={handleSystemKnown}
+                    disabled={systemStats.known === 0}
                     style={[
-                      styles.secondaryButtonText,
-                      unknownCount === 0 && styles.secondaryButtonTextDisabled,
+                      styles.secondaryButton,
+                      systemStats.known === 0 && styles.secondaryButtonDisabled,
                     ]}>
-                    Не знаю ({unknownCount})
+                    <BlurView intensity={24} tint={theme.blurTint} style={styles.secondaryButtonGlass}>
+                      <Text
+                        style={[
+                          styles.secondaryButtonText,
+                          systemStats.known === 0 && styles.secondaryButtonTextDisabled,
+                        ]}>
+                        Знаю
+                      </Text>
+                    </BlurView>
+                  </Pressable>
+                </View>
+              </View>
+            </BlurView>
+
+            <BlurView intensity={28} tint={theme.blurTint} style={styles.previewCard}>
+              <View style={styles.customHeader}>
+                <View style={styles.cardHeaderCopy}>
+                  <Text style={styles.previewLabel}>Мои слова</Text>
+                  <Text style={styles.cardDescription}>Все ваши добавленные слова</Text>
+                  <Text style={styles.customCountText}>
+                    {customWordsLoading ? 'Загрузка...' : `Добавлено: ${customStats.total}`}
                   </Text>
-                </BlurView>
-              </Pressable>
-            </View>
+                </View>
+
+                <Pressable onPress={handleAddWord} style={styles.inlineAddButton}>
+                  <Text style={styles.inlineAddButtonText}>Добавить</Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.statsRow}>
+                <View style={styles.statItem}>
+                  <Text style={[styles.statValue, styles.statValueSuccess]}>{customStats.known}</Text>
+                  <Text style={styles.statLabel}>Знаю</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={[styles.statValue, styles.statValueDanger]}>{customStats.unknown}</Text>
+                  <Text style={styles.statLabel}>Не знаю</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{customStats.unstudied}</Text>
+                  <Text style={styles.statLabel}>Новые</Text>
+                </View>
+              </View>
+
+              <View style={styles.cardActions}>
+                <Pressable
+                  onPress={handleCustomStart}
+                  disabled={customWordsLoading || customStats.total === 0}
+                  style={({ pressed }) => [
+                    styles.primaryButton,
+                    styles.cardPrimaryButton,
+                    pressed && styles.primaryButtonPressed,
+                    (customWordsLoading || customStats.total === 0) && styles.primaryButtonDisabled,
+                  ]}>
+                  <Text style={styles.primaryButtonText}>Начать</Text>
+                </Pressable>
+
+                <View style={styles.secondaryRow}>
+                  <Pressable
+                    onPress={handleCustomUnknown}
+                    disabled={customWordsLoading || customStats.unknown === 0}
+                    style={[
+                      styles.secondaryButton,
+                      (customWordsLoading || customStats.unknown === 0) && styles.secondaryButtonDisabled,
+                    ]}>
+                    <BlurView intensity={24} tint={theme.blurTint} style={styles.secondaryButtonGlass}>
+                      <Text
+                        style={[
+                          styles.secondaryButtonText,
+                          (customWordsLoading || customStats.unknown === 0) && styles.secondaryButtonTextDisabled,
+                        ]}>
+                        Не знаю
+                      </Text>
+                    </BlurView>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={handleCustomKnown}
+                    disabled={customWordsLoading || customStats.known === 0}
+                    style={[
+                      styles.secondaryButton,
+                      (customWordsLoading || customStats.known === 0) && styles.secondaryButtonDisabled,
+                    ]}>
+                    <BlurView intensity={24} tint={theme.blurTint} style={styles.secondaryButtonGlass}>
+                      <Text
+                        style={[
+                          styles.secondaryButtonText,
+                          (customWordsLoading || customStats.known === 0) && styles.secondaryButtonTextDisabled,
+                        ]}>
+                        Знаю
+                      </Text>
+                    </BlurView>
+                  </Pressable>
+                </View>
+              </View>
+            </BlurView>
           </View>
-        </View>
+        </ScrollView>
       </SafeAreaView>
     </View>
   );
@@ -206,129 +298,92 @@ const createStyles = (theme: AppTheme) =>
     safeArea: {
       flex: 1,
     },
-    content: {
-      flex: 1,
-      justifyContent: 'space-between',
+    scrollContent: {
+      flexGrow: 1,
       paddingHorizontal: 24,
-      paddingTop: 24,
-      paddingBottom: 24,
+      paddingTop: 16,
+      paddingBottom: 28,
     },
-    headerRow: {
-      alignItems: 'center',
+    headerBlock: {
+      marginBottom: 24,
+    },
+    headerTopRow: {
+      alignItems: 'flex-start',
       flexDirection: 'row',
       justifyContent: 'space-between',
-      marginBottom: 12,
+      gap: 16,
     },
-    headerSpacer: {
-      width: 1,
-    },
-    upperBlock: {
+    titleWrap: {
       flex: 1,
-      justifyContent: 'center',
+      paddingTop: 6,
     },
-    topArea: {
-      alignItems: 'center',
-      marginBottom: 28,
+    title: {
+      color: theme.text.primary,
+      fontSize: 34,
+      fontWeight: '800',
+      letterSpacing: 0,
     },
-    topRow: {
+    subtitle: {
+      color: theme.text.secondary,
+      fontSize: 15,
+      fontWeight: '500',
+      lineHeight: 22,
+      marginTop: 8,
+      maxWidth: 230,
+    },
+    headerActions: {
       alignItems: 'center',
       flexDirection: 'row',
-      gap: 12,
-      marginBottom: 18,
+      gap: 10,
     },
-    badge: {
+    iconButton: {
+      alignItems: 'center',
       backgroundColor: theme.surface.glass,
-      borderRadius: 8,
+      borderRadius: 10,
       borderWidth: 1,
       borderColor: theme.border.strong,
-      overflow: 'hidden',
-      paddingHorizontal: 14,
+      flexDirection: 'row',
+      gap: 8,
+      justifyContent: 'center',
+      minHeight: 40,
+      paddingHorizontal: 12,
       paddingVertical: 10,
     },
-    badgeText: {
-      color: theme.accent.purple,
+    iconButtonText: {
+      color: theme.text.secondary,
       fontSize: 13,
       fontWeight: '700',
-      letterSpacing: 0,
     },
-    themeSwitch: {
-      backgroundColor: theme.surface.glass,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: theme.border.strong,
-      flexDirection: 'row',
-      overflow: 'hidden',
-      padding: 2,
-    },
-    themeSwitchButton: {
-      alignItems: 'center',
-      borderRadius: 6,
-      justifyContent: 'center',
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-    },
-    themeSwitchButtonActive: {
-      backgroundColor: theme.accent.purple,
-    },
-    themeSwitchText: {
+    iconGlyph: {
       color: theme.text.secondary,
-      fontSize: 12,
-      fontWeight: '600',
-      letterSpacing: 0,
-    },
-    themeSwitchTextActive: {
-      color: '#FFFFFF',
+      fontSize: 16,
+      fontWeight: '700',
+      lineHeight: 16,
     },
     logoutButton: {
       alignItems: 'center',
       backgroundColor: theme.surface.glass,
-      borderRadius: 8,
+      borderRadius: 10,
       borderWidth: 1,
       borderColor: theme.border.strong,
       justifyContent: 'center',
+      minHeight: 40,
       paddingHorizontal: 12,
-      paddingVertical: 8,
+      paddingVertical: 10,
     },
     logoutText: {
       color: theme.text.secondary,
       fontSize: 13,
-      fontWeight: '600',
+      fontWeight: '700',
     },
-    titleBlock: {
-      alignItems: 'center',
-      gap: 10,
-    },
-    title: {
-      color: theme.text.primary,
-      fontSize: 42,
-      fontWeight: '800',
-      letterSpacing: 0,
-      textAlign: 'center',
-    },
-    titleMask: {
-      backgroundColor: 'transparent',
-    },
-    titleTransparent: {
-      opacity: 0,
-    },
-    subtitle: {
-      color: theme.text.secondary,
-      fontSize: 17,
-      fontWeight: '500',
-      letterSpacing: 0,
-      lineHeight: 25,
-      maxWidth: 320,
-      textAlign: 'center',
-    },
-    middleArea: {
-      alignItems: 'center',
+    cardsColumn: {
+      gap: 14,
     },
     previewCard: {
       backgroundColor: theme.surface.glassStrong,
       borderRadius: 20,
       borderWidth: 1,
       borderColor: theme.border.subtle,
-      maxWidth: 360,
       overflow: 'hidden',
       paddingHorizontal: 20,
       paddingTop: 18,
@@ -341,13 +396,50 @@ const createStyles = (theme: AppTheme) =>
       }),
       width: '100%',
     },
+    cardHeader: {
+      marginBottom: 16,
+    },
+    cardHeaderCopy: {
+      flex: 1,
+      paddingRight: 12,
+    },
     previewLabel: {
       color: theme.accent.purple,
+      fontSize: 15,
+      fontWeight: '700',
+      letterSpacing: 0,
+      marginBottom: 6,
+    },
+    cardDescription: {
+      color: theme.text.secondary,
+      fontSize: 14,
+      fontWeight: '500',
+      lineHeight: 20,
+    },
+    customHeader: {
+      alignItems: 'flex-start',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 16,
+    },
+    customCountText: {
+      color: theme.text.secondary,
       fontSize: 13,
       fontWeight: '600',
-      letterSpacing: 0,
-      marginBottom: 16,
-      textAlign: 'center',
+      marginTop: 8,
+    },
+    inlineAddButton: {
+      alignItems: 'center',
+      backgroundColor: theme.button.primary,
+      borderRadius: 8,
+      justifyContent: 'center',
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+    },
+    inlineAddButtonText: {
+      color: theme.text.onPrimary,
+      fontSize: 13,
+      fontWeight: '700',
     },
     statsRow: {
       alignItems: 'center',
@@ -382,9 +474,9 @@ const createStyles = (theme: AppTheme) =>
       height: 40,
       width: 1,
     },
-    bottomArea: {
+    cardActions: {
       gap: 12,
-      paddingTop: 18,
+      marginTop: 18,
     },
     primaryButton: {
       alignItems: 'center',
@@ -405,8 +497,11 @@ const createStyles = (theme: AppTheme) =>
       backgroundColor: theme.button.primaryPressed,
     },
     primaryButtonDisabled: {
-      backgroundColor: theme.button.disabled,
       opacity: 0.5,
+    },
+    cardPrimaryButton: {
+      minHeight: 54,
+      width: '100%',
     },
     primaryButtonText: {
       color: theme.text.onPrimary,

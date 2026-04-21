@@ -7,6 +7,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 
 import type { AppTheme } from '@/constants/theme';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import type { StudyMode, StudyReviewBucket, WordSource } from '@/types';
 import { createShadow } from '@/utils/shadow';
 
 const readParam = (value: string | string[] | undefined) =>
@@ -17,6 +18,18 @@ const parseCount = (value: string | undefined) => {
   return Number.isFinite(count) ? count : 0;
 };
 
+const isStudyMode = (value: string | undefined): value is StudyMode =>
+  value === 'system:start' ||
+  value === 'system:review' ||
+  value === 'custom:start' ||
+  value === 'custom:review';
+
+const isReviewBucket = (value: string | undefined): value is StudyReviewBucket =>
+  value === 'known' || value === 'unknown';
+
+const isWordSource = (value: string | undefined): value is WordSource =>
+  value === 'system' || value === 'custom';
+
 export default function ResultScreen() {
   const { theme } = useAppTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -24,22 +37,47 @@ export default function ResultScreen() {
     total?: string | string[];
     knownCount?: string | string[];
     unknownCount?: string | string[];
+    source?: string | string[];
+    repeatMode?: string | string[];
+    repeatBucket?: string | string[];
   }>();
 
   const total = parseCount(readParam(params.total));
   const knownCount = parseCount(readParam(params.knownCount));
   const unknownCount = parseCount(readParam(params.unknownCount));
+  const source = isWordSource(readParam(params.source)) ? readParam(params.source) : 'system';
+  const repeatMode = isStudyMode(readParam(params.repeatMode))
+    ? readParam(params.repeatMode)
+    : `${source}:review`;
+  const repeatBucket = isReviewBucket(readParam(params.repeatBucket))
+    ? readParam(params.repeatBucket)
+    : 'unknown';
 
   const handleRepeatUnknown = () => {
     if (unknownCount === 0) {
       return;
     }
-    router.replace({ pathname: '/study', params: { mode: 'unknown' } });
+
+    router.replace({
+      pathname: '/study',
+      params: {
+        mode: repeatMode,
+        bucket: repeatBucket,
+      },
+    });
   };
 
   const handleClose = () => {
     router.replace('/');
   };
+
+  const eyebrow = source === 'custom' ? 'Мои слова' : 'Результат';
+  const note =
+    unknownCount === 0
+      ? 'Отлично! Все слова из этой сессии уже у вас под контролем.'
+      : source === 'custom'
+        ? 'Повторите свои незнакомые слова, чтобы закрепить именно ваш словарь.'
+        : 'Продолжай изучать незнакомые слова.';
 
   return (
     <View style={styles.screen}>
@@ -53,7 +91,7 @@ export default function ResultScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.content}>
           <View style={styles.header}>
-            <Text style={styles.eyebrow}>Результат</Text>
+            <Text style={styles.eyebrow}>{eyebrow}</Text>
             <Text style={styles.title}>Сессия завершена</Text>
           </View>
 
@@ -78,11 +116,7 @@ export default function ResultScreen() {
                 </View>
               </View>
 
-              <Text style={styles.note}>
-                {unknownCount === 0
-                  ? 'Отлично! Все слова из сессии знакомы.'
-                  : 'Продолжай изучать незнакомые слова.'}
-              </Text>
+              <Text style={styles.note}>{note}</Text>
             </BlurView>
           </View>
 
@@ -257,10 +291,6 @@ const createStyles = (theme: AppTheme) =>
         opacity: theme.mode === 'dark' ? 0.2 : 0.12,
         radius: 20,
       }),
-    },
-    primaryButtonDisabled: {
-      backgroundColor: theme.button.disabled,
-      opacity: 0.5,
     },
     primaryButtonText: {
       color: theme.text.onPrimary,

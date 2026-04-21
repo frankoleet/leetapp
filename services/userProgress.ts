@@ -6,7 +6,7 @@ import {
 } from 'firebase/firestore';
 
 import { db } from '@/config/firebase';
-import type { UserProgress } from '@/types';
+import { parseWordProgressKey, type UserProgress, type WordProgressKey } from '@/types';
 
 const USERS_COLLECTION = 'users';
 const PROGRESS_COLLECTION = 'progress';
@@ -18,11 +18,14 @@ const normalizeIds = (value: unknown) => {
     return [];
   }
 
-  const uniqueIds = new Set<string>();
+  const uniqueIds = new Set<WordProgressKey>();
 
   value.forEach((item) => {
     if (typeof item === 'string' && item.trim()) {
-      uniqueIds.add(item);
+      const parsed = parseWordProgressKey(item);
+      if (parsed) {
+        uniqueIds.add(parsed.key);
+      }
     }
   });
 
